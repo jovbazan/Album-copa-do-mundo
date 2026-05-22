@@ -253,6 +253,42 @@ function BarChart({ slices }) {
   );
 }
 
+
+// ─── EXPORT / IMPORT ─────────────────────────────────────────────────────────
+function exportarDados(counts, eventos, fin, nomeUser, valorAlbum) {
+  const data = new Date().toLocaleDateString("pt-BR").replace(/\//g,"-");
+  const payload = {
+    versao: "1.0",
+    exportadoEm: new Date().toISOString(),
+    nomeUser,
+    valorAlbum,
+    counts,
+    eventos,
+    fin,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `album-copa-2026-backup-${data}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importarDados(file, onSuccess, onError) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const payload = JSON.parse(e.target.result);
+      if(!payload.counts || !payload.fin) throw new Error("Arquivo inválido");
+      onSuccess(payload);
+    } catch(err) {
+      onError("Arquivo inválido ou corrompido.");
+    }
+  };
+  reader.readAsText(file);
+}
+
 // ─── FIGCARD ─────────────────────────────────────────────────────────────────
 function FigCard({ id, label, count, onTap, cor1, cor2 }) {
   let bg, border, tc, badge;
@@ -293,6 +329,9 @@ export default function App() {
   const [showPDF, setShowPDF] = useState(false);
   const [statsModal, setStatsModal] = useState(null); // "coladas"|"faltando"|"repetidas"
   const [confirmDelete, setConfirmDelete] = useState(null); // id do evento a apagar
+  const [showBackup, setShowBackup] = useState(false);
+  const [importError, setImportError] = useState(null);
+  const fileInputRef = useRef(null);
   const [evForm, setEvForm] = useState({});
   const [filterGrupo, setFilterGrupo] = useState("todos");
 
@@ -620,9 +659,35 @@ export default function App() {
                 </div>
               </div>
 
-              <button onClick={()=>setShowPDF(true)} style={{width:"100%",padding:12,background:"#0d1020",border:"1px solid #3b82f633",borderRadius:10,cursor:"pointer",color:"#3b82f6",fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:15,marginBottom:10}}>
+              <button onClick={()=>setShowPDF(true)} style={{width:"100%",padding:12,background:"#0d1020",border:"1px solid #3b82f633",borderRadius:10,cursor:"pointer",color:"#3b82f6",fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:15,marginBottom:8}}>
                 📄 Gerar Lista para Trocas (PDF)
               </button>
+              <button onClick={()=>setShowBackup(true)} style={{width:"100%",padding:12,background:"#0d1020",border:"1px solid #22c55e33",borderRadius:10,cursor:"pointer",color:"#22c55e",fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:15,marginBottom:10}}>
+                💾 Backup / Restaurar Dados
+              </button>
+              <input ref={fileInputRef} type="file" accept=".json" style={{display:"none"}} onChange={e=>{
+                const file = e.target.files[0];
+                if(!file) return;
+                importarDados(file,
+                  (payload)=>{
+                    setCounts(payload.counts||{});
+                    setEventos(payload.eventos||[]);
+                    setFin(payload.fin||{gasto:0,recebido:0,economizado:0});
+                    if(payload.nomeUser) setNomeUser(payload.nomeUser);
+                    if(payload.valorAlbum!=null) setValorAlbum(payload.valorAlbum);
+                    sSet("copa26:counts", payload.counts||{});
+                    sSet("copa26:eventos", payload.eventos||[]);
+                    sSet("copa26:fin", payload.fin||{gasto:0,recebido:0,economizado:0});
+                    if(payload.nomeUser) sSet("copa26:nome", payload.nomeUser);
+                    if(payload.valorAlbum!=null) sSet("copa26:valorAlbum", payload.valorAlbum);
+                    setShowBackup(false);
+                    setImportError(null);
+                    alert("✅ Dados restaurados com sucesso!");
+                  },
+                  (err)=>setImportError(err)
+                );
+                e.target.value="";
+              }}/>
 
               {/* Nome */}
               <div style={{color:"#444",fontSize:10,fontWeight:700,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Seu nome</div>
@@ -717,6 +782,35 @@ export default function App() {
             </div>
           </div>
         )}
+        {/* MODAL BACKUP */}
+        {showBackup && (
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:2000,padding:16}}>
+            <div style={{background:"#0f1117",border:"1px solid #22c55e33",borderRadius:20,padding:24,width:"100%",maxWidth:420,marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:20,color:"#22c55e"}}>💾 Backup de Dados</div>
+                <button onClick={()=>{setShowBackup(false);setImportError(null);}} style={{background:"none",border:"none",color:"#444",cursor:"pointer",fontSize:20}}>✕</button>
+              </div>
+
+              <div style={{background:"#0d1020",border:"1px solid #1a1d2a",borderRadius:12,padding:16,marginBottom:12}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:15,color:"#22c55e",marginBottom:6}}>⬇️ Exportar (Fazer Backup)</div>
+                <div style={{color:"#666",fontSize:12,marginBottom:12,lineHeight:1.5}}>Baixa um arquivo .json com todas suas figurinhas, eventos e dados financeiros. Guarde no Google Drive ou WhatsApp.</div>
+                <button onClick={()=>exportarDados(counts,eventos,fin,nomeUser,valorAlbum)} style={{width:"100%",padding:"11px",background:"#22c55e",border:"none",borderRadius:10,color:"#000",fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:15,cursor:"pointer"}}>
+                  BAIXAR BACKUP (.json)
+                </button>
+              </div>
+
+              <div style={{background:"#0d1020",border:"1px solid #1a1d2a",borderRadius:12,padding:16}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:15,color:"#f59e0b",marginBottom:6}}>⬆️ Importar (Restaurar)</div>
+                <div style={{color:"#666",fontSize:12,marginBottom:12,lineHeight:1.5}}>Selecione um arquivo de backup .json para restaurar seus dados em qualquer dispositivo.</div>
+                {importError && <div style={{color:"#ef4444",fontSize:12,marginBottom:8}}>⚠️ {importError}</div>}
+                <button onClick={()=>fileInputRef.current?.click()} style={{width:"100%",padding:"11px",background:"#f59e0b",border:"none",borderRadius:10,color:"#000",fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:15,cursor:"pointer"}}>
+                  SELECIONAR ARQUIVO
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* MODAL CONFIRMAR EXCLUSÃO */}
         {confirmDelete && (
           <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:2000,padding:16}}>
