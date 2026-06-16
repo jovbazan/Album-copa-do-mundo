@@ -66,6 +66,15 @@ const FWC_ITEMS = Array.from({length:19},(_,i)=>({
 const CC_PLAYERS = ["Lamine Yamal","Van Dijk","H. Kane","F. Valverde","Camavinga","G. Magalhães","Mbappé","Haaland","Pedri","Bellingham","R. Dias","M. Salah","A. Putellas","Vinicius Jr"];
 const CC_ITEMS = CC_PLAYERS.map((nome,i)=>({ id:`CC-${i+1}`, nome }));
 
+const SOMOS26_ITEMS = [{ id:"S26-0", nome:"Somos 26 — Figurinha Especial" }];
+
+const EXTRA_ITEMS = [
+  { id:"EXT-REGU", nome:"Extra Sticker Regular" },
+  { id:"EXT-BRON", nome:"Extra Sticker Bronze" },
+  { id:"EXT-PRAT", nome:"Extra Sticker Prata" },
+  { id:"EXT-OURO", nome:"Extra Sticker Ouro" },
+];
+
 function gerarFigsSel(sel) {
   const f = [];
   f.push({ id:`${sel.id}-1`, nome:"Escudo", tipo:"escudo" });
@@ -96,7 +105,7 @@ function buildGroups(counts) {
   const faltando = [], repetidas = [], coladas = [];
   const allFigs = [
     ...SELECOES.flatMap(s=>gerarFigsSel(s)),
-    ...FWC_ITEMS, ...CC_ITEMS
+    ...FWC_ITEMS, ...CC_ITEMS, ...SOMOS26_ITEMS, ...EXTRA_ITEMS
   ];
   allFigs.forEach(f => {
     const c = counts[f.id]||0;
@@ -107,6 +116,7 @@ function buildGroups(counts) {
   const nomesSel = {};
   SELECOES.forEach(s=>{ nomesSel[s.id]=`${s.bandeira} ${s.nome}`; });
   nomesSel["FWC"]="⭐ Especiais FWC"; nomesSel["CC"]="🥤 Coca-Cola";
+  nomesSel["S26"]="🌍 Somos 26"; nomesSel["EXT"]="⭐ Extra Stickers";
 
   const agrupar = (ids) => {
     const g = {};
@@ -361,6 +371,8 @@ export default function App() {
     ...SELECOES.flatMap(s=>gerarFigsSel(s).map(f=>f.id)),
     ...FWC_ITEMS.map(f=>f.id),
     ...CC_ITEMS.map(f=>f.id),
+    ...SOMOS26_ITEMS.map(f=>f.id),
+    ...EXTRA_ITEMS.map(f=>f.id),
   ],[]);
 
   const stats = useMemo(()=>{
@@ -613,6 +625,38 @@ export default function App() {
                     <span style={{fontSize:7,color:"#666",maxWidth:42,textAlign:"center"}}>{f.id}</span>
                   </div>
                 ))}
+              </div>
+
+              {/* Somos 26 */}
+              <div style={{marginTop:16}}>
+                <div style={{background:"#0a1a0a",border:"1px solid #16a34a33",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:16,color:"#22c55e"}}>🌍 Somos 26 — Figurinha Especial</div>
+                  <div style={{color:"#555",fontSize:11}}>{SOMOS26_ITEMS.filter(f=>(counts[f.id]||0)>=1).length}/1 colada</div>
+                </div>
+                <div style={{display:"flex",gap:5}}>
+                  {SOMOS26_ITEMS.map(f=>(
+                    <div key={f.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                      <FigCard id={f.id} label={f.nome} count={counts[f.id]||0} onTap={()=>tapFig(f.id)} cor1="#16a34a" cor2="#FFFFFF"/>
+                      <span style={{fontSize:7,color:"#666",maxWidth:42,textAlign:"center"}}>S26</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Extra Stickers */}
+              <div style={{marginTop:16}}>
+                <div style={{background:"#0d0a1a",border:"1px solid #7c3aed33",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:16,color:"#a855f7"}}>⭐ Extra Stickers — Legends</div>
+                  <div style={{color:"#555",fontSize:11}}>{EXTRA_ITEMS.filter(f=>(counts[f.id]||0)>=1).length}/{EXTRA_ITEMS.length} coladas · REGU · BRON · PRAT · OURO</div>
+                </div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                  {EXTRA_ITEMS.map(f=>(
+                    <div key={f.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                      <FigCard id={f.id} label={f.nome} count={counts[f.id]||0} onTap={()=>tapFig(f.id)} cor1="#7c3aed" cor2="#FFFFFF"/>
+                      <span style={{fontSize:7,color:"#666",maxWidth:42,textAlign:"center"}}>{f.id.replace("EXT-","")}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
